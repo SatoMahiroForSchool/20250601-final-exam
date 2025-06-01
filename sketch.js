@@ -63,7 +63,7 @@ let questions = [
 ];
 
 function setup() {
-  createCanvas(640, 480); // 設置畫布大小
+  createCanvas(1920, 1020); // 設置畫布大小
 
   // 啟用攝影機
   video = createCapture(VIDEO);
@@ -272,25 +272,31 @@ function detectGesture(landmarks) {
 
 // 繪製對話氣泡函式
 function drawSpeechBubble(text) {
-  const bubbleX = width - 150; // 氣泡固定在右側
-  const bubbleTextX = width - 100;
+  const bubbleWidth = 300; // 氣泡的寬度
+  const bubbleHeight = 200; // 氣泡的高度
+  const bubbleX = width - bubbleWidth - 50; // 氣泡的 X 座標
+  const bubbleY = 50; // 氣泡的 Y 座標
+  const bubbleTextX = bubbleX + bubbleWidth / 2; // 文字的 X 座標
+  const bubbleTextY = bubbleY + bubbleHeight / 2; // 文字的 Y 座標
 
+  // 繪製氣泡背景
   fill(255);
   stroke(0);
   strokeWeight(2);
+  rect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 20); // 圓角矩形
+
+  // 繪製氣泡尾巴
   beginShape();
-  vertex(bubbleX, 50);
-  vertex(bubbleX + 100, 50);
-  vertex(bubbleX + 100, 150);
-  vertex(bubbleX + 50, 150);
-  vertex(bubbleX + 30, 170);
-  vertex(bubbleX + 30, 150);
-  vertex(bubbleX, 150);
+  vertex(bubbleX + bubbleWidth - 30, bubbleY + bubbleHeight);
+  vertex(bubbleX + bubbleWidth - 50, bubbleY + bubbleHeight + 20);
+  vertex(bubbleX + bubbleWidth - 70, bubbleY + bubbleHeight);
   endShape(CLOSE);
 
+  // 繪製文字
   fill(0);
   noStroke();
-  textSize(14);
+  textSize(16); // 調整文字大小
   textAlign(CENTER, CENTER);
-  text(text, bubbleTextX, 100); // 顯示文字
+  textWrap(WORD); // 啟用文字換行
+  text(text, bubbleX + 10, bubbleY + 10, bubbleWidth - 20, bubbleHeight - 20); // 限制文字範圍
 }
