@@ -496,14 +496,288 @@ function detectGesture(landmarks) {
   return null;
 }
 
+// --- 新手模式：拖拉紅藍綠球到正確顏色區 ---
+let easyBalls = [];
+let easyTargets = [
+  { x: 120, y: 400, color: "red" },
+  { x: 320, y: 400, color: "green" },
+  { x: 520, y: 400, color: "blue" }
+];
+let easyScore = 0;
+let easyTimer = 0;
+let easyGameStarted = false;
+let easyDraggingIdx = null;
+
 function playEasy() {
-  // 新手模式遊戲內容
+  if (!easyGameStarted) {
+    // 初始化
+    easyBalls = [];
+    let colors = ["red", "green", "blue"];
+    for (let i = 0; i < 3; i++) {
+      easyBalls.push({
+        x: random(100, 540),
+        y: random(100, 250),
+        color: colors[i],
+        dragging: false
+      });
+    }
+    easyScore = 0;
+    easyTimer = millis();
+    easyGameStarted = true;
+    easyDraggingIdx = null;
+  }
+
+  // 計時
+  let remain = max(0, 15 - int((millis() - easyTimer) / 1000));
+  fill(255);
+  textSize(22);
+  textAlign(LEFT, TOP);
+  text("剩餘時間：" + remain + " 秒", 20, 80);
+  text("分數：" + easyScore, 20, 110);
+
+  // 畫目標區
+  for (let t of easyTargets) {
+    fill(t.color);
+    stroke(0);
+    ellipse(t.x, t.y, 80, 80);
+  }
+  fill(0);
+  textSize(18);
+  textAlign(CENTER, CENTER);
+  text("紅", easyTargets[0].x, easyTargets[0].y);
+  text("綠", easyTargets[1].x, easyTargets[1].y);
+  text("藍", easyTargets[2].x, easyTargets[2].y);
+
+  // 畫球
+  for (let i = 0; i < easyBalls.length; i++) {
+    let b = easyBalls[i];
+    fill(b.color);
+    stroke(0);
+    ellipse(b.x, b.y, 50, 50);
+  }
+
+  // 手指拖曳
+  if (hands.length > 0) {
+    let finger = hands[0].landmarks[8];
+    // 拖曳中
+    if (easyDraggingIdx !== null) {
+      easyBalls[easyDraggingIdx].x = finger[0];
+      easyBalls[easyDraggingIdx].y = finger[1];
+      // 放到正確目標
+      let b = easyBalls[easyDraggingIdx];
+      for (let t of easyTargets) {
+        if (
+          dist(b.x, b.y, t.x, t.y) < 50 &&
+          b.color === t.color
+        ) {
+          easyScore++;
+          // 移除該球
+          easyBalls.splice(easyDraggingIdx, 1);
+          easyDraggingIdx = null;
+          break;
+        }
+      }
+    } else {
+      // 檢查是否點到球
+      for (let i = 0; i < easyBalls.length; i++) {
+        let b = easyBalls[i];
+        if (dist(finger[0], finger[1], b.x, b.y) < 30) {
+          easyDraggingIdx = i;
+          break;
+        }
+      }
+    }
+  } else {
+    easyDraggingIdx = null;
+  }
+
+  // 時間到或球全放完
+  if (remain <= 0 || easyBalls.length === 0) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + easyScore, width / 2, height / 2);
+    textSize(20);
+    text("請點擊返回選單", width / 2, height / 2 + 40);
+    if (hands.length === 0) easyGameStarted = false; // 等待手離開重設
+  }
 }
+
+// --- 一般模式：選英文單字 ---
+let normalWords = [
+  { q: "蘋果", a: "apple" },
+  { q: "香蕉", a: "banana" },
+  { q: "貓", a: "cat" },
+  { q: "狗", a: "dog" }
+];
+let normalCurrent = null;
+let normalOptions = [];
+let normalScore = 0;
+let normalTimer = 0;
+let normalGameStarted = false;
 
 function playNormal() {
-  // 一般模式遊戲內容
+  if (!normalGameStarted) {
+    // 初始化
+    normalCurrent = floor(random(normalWords.length));
+    let correct = normalWords[normalCurrent].a;
+    // 隨機選三個錯誤選項
+    let options = [correct];
+    while (options.length < 4) {
+      let w = normalWords[floor(random(normalWords.length))].a;
+      if (!options.includes(w)) options.push(w);
+    }
+    shuffle(options, true);
+    normalOptions = options;
+    normalScore = 0;
+    normalTimer = millis();
+    normalGameStarted = true;
+  }
+
+  // 計時
+  let remain = max(0, 15 - int((millis() - normalTimer) / 1000));
+  fill(255);
+  textSize(22);
+  textAlign(LEFT, TOP);
+  text("剩餘時間：" + remain + " 秒", 20, 80);
+  text("分數：" + normalScore, 20, 110);
+
+  // 題目
+  fill(0);
+  textSize(28);
+  textAlign(CENTER, TOP);
+  text("請選出「" + normalWords[normalCurrent].q + "」的英文", width / 2, 140);
+
+  // 選項按鈕
+  let btnW = 180, btnH = 50;
+  let btnY = 220;
+  for (let i = 0; i < 4; i++) {
+    let btnX = width / 2 - 200 + i * 130;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 12);
+    fill(0);
+    noStroke();
+    textSize(22);
+    textAlign(CENTER, CENTER);
+    text(normalOptions[i], btnX + btnW / 2, btnY + btnH / 2);
+  }
+
+  // 手指選擇
+  if (hands.length > 0) {
+    let finger = hands[0].landmarks[8];
+    for (let i = 0; i < 4; i++) {
+      let btnX = width / 2 - 200 + i * 130;
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        // 答對
+        if (normalOptions[i] === normalWords[normalCurrent].a) {
+          normalScore++;
+        }
+        // 換下一題
+        normalCurrent = floor(random(normalWords.length));
+        let correct = normalWords[normalCurrent].a;
+        let options = [correct];
+        while (options.length < 4) {
+          let w = normalWords[floor(random(normalWords.length))].a;
+          if (!options.includes(w)) options.push(w);
+        }
+        shuffle(options, true);
+        normalOptions = options;
+        break;
+      }
+    }
+  }
+
+  // 時間到
+  if (remain <= 0) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + normalScore, width / 2, height / 2);
+    textSize(20);
+    text("請點擊返回選單", width / 2, height / 2 + 40);
+    if (hands.length === 0) normalGameStarted = false;
+  }
 }
 
+// --- 瘋狂模式：攔截白球 ---
+let crazyBalls = [];
+let crazyScore = 0;
+let crazyTimer = 0;
+let crazyGameStarted = false;
+
 function playCrazy() {
-  // 瘋狂模式遊戲內容
+  if (!crazyGameStarted) {
+    crazyBalls = [];
+    crazyScore = 0;
+    crazyTimer = millis();
+    crazyGameStarted = true;
+  }
+
+  // 計時
+  let remain = max(0, 15 - int((millis() - crazyTimer) / 1000));
+  fill(255);
+  textSize(22);
+  textAlign(LEFT, TOP);
+  text("剩餘時間：" + remain + " 秒", 20, 80);
+  text("分數：" + crazyScore, 20, 110);
+
+  // 產生新球
+  if (frameCount % 20 === 0 && remain > 0) {
+    let color = random() < 0.5 ? "white" : "black";
+    crazyBalls.push({
+      x: random(50, width - 50),
+      y: -30,
+      color: color,
+      caught: false
+    });
+  }
+
+  // 畫球並下落
+  for (let b of crazyBalls) {
+    if (!b.caught) {
+      fill(b.color === "white" ? 255 : 0);
+      stroke(0);
+      ellipse(b.x, b.y, 40, 40);
+      b.y += 6;
+    }
+  }
+
+  // 手指攔截
+  if (hands.length > 0) {
+    let finger = hands[0].landmarks[8];
+    for (let b of crazyBalls) {
+      if (
+        !b.caught &&
+        b.color === "white" &&
+        dist(finger[0], finger[1], b.x, b.y) < 30
+      ) {
+        b.caught = true;
+        crazyScore++;
+      }
+    }
+  }
+
+  // 移除已掉出畫面或已攔截的球
+  crazyBalls = crazyBalls.filter(b => b.y < height + 30 && !b.caught);
+
+  // 時間到
+  if (remain <= 0) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + crazyScore, width / 2, height / 2);
+    textSize(20);
+    text("請點擊返回選單", width / 2, height / 2 + 40);
+    if (hands.length === 0) crazyGameStarted = false;
+  }
 }
