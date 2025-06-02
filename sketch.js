@@ -63,7 +63,7 @@ let questions = [
 ];
 
 function setup() {
-  createCanvas(1920, 1020); // 設置畫布大小
+  createCanvas(640, 480); // 設置畫布大小為 640x480
 
   // 啟用攝影機
   video = createCapture(VIDEO);
@@ -92,9 +92,6 @@ function draw() {
 
   image(video, 0, 0, width, height); // 顯示攝影機畫面
 
-  // 繪製偵測框
-  drawDetectionBox();
-
   // 根據不同的偵測階段執行對應邏輯
   if (detectionPhase === "face") {
     handleFaceDetection(); // 處理臉部偵測邏輯
@@ -114,54 +111,35 @@ function draw() {
   }
 }
 
-// 繪製偵測框
-function drawDetectionBox() {
-  const boxX = width / 2 - 100; // 偵測框的 X 座標
-  const boxY = height / 2 - 100; // 偵測框的 Y 座標
-  const boxWidth = 200; // 偵測框的寬度
-  const boxHeight = 200; // 偵測框的高度
-
-  noFill();
-  stroke(0, 255, 0); // 設置綠色邊框
-  strokeWeight(3); // 設置邊框粗細為 3px
-  rect(boxX, boxY, boxWidth, boxHeight); // 繪製矩形框
-}
-
-// 判斷點是否在偵測框內
-function isInsideBox(x, y) {
-  const boxX = width / 2 - 100;
-  const boxY = height / 2 - 100;
-  const boxWidth = 200;
-  const boxHeight = 200;
-
-  // 判斷點是否在框內
-  return x > boxX && x < boxX + boxWidth && y > boxY && y < boxY + boxHeight;
+// 右側顯示提示文字
+function showRightText(txt) {
+  fill(255);
+  rect(width - 220, 20, 200, 440, 20);
+  fill(0);
+  textSize(18);
+  textAlign(LEFT, TOP);
+  textWrap(WORD);
+  text(txt, width - 210, 30, 180, 420);
 }
 
 // 處理臉部偵測邏輯
 function handleFaceDetection() {
-  drawSpeechBubble("請將臉部置於方框之中"); // 提示使用者將臉部置於框內
-
+  let msg = "請將臉部對準鏡頭";
   if (predictions.length > 0) {
-    const keypoints = predictions[0].scaledMesh; // 取得臉部關鍵點座標
-    const nose = keypoints[1]; // 假設鼻子作為臉部中心點
-
-    if (nose && isInsideBox(nose.x, nose.y)) {
-      drawSpeechBubble("成功偵測到臉部！");
-      if (!countdownStartTime) countdownStartTime = millis(); // 開始倒數計時
-      if (millis() - countdownStartTime > 1000) {
-        countdown--;
-        countdownStartTime = millis(); // 重置倒數計時
-      }
-      if (countdown <= 0) detectionPhase = "hand"; // 切換到手部偵測階段
+    msg = "成功偵測到臉部！";
+    if (!countdownStartTime) countdownStartTime = millis(); // 開始倒數計時
+    if (millis() - countdownStartTime > 1000) {
+      countdown--;
+      countdownStartTime = millis(); // 重置倒數計時
     }
+    if (countdown <= 0) detectionPhase = "hand"; // 切換到手部偵測階段
   }
+  showRightText(msg);
 }
 
 // 處理手部偵測邏輯
 function handleHandDetection() {
-  drawSpeechBubble("偵測手部"); // 提示使用者進行手部偵測
-
+  let msg = "請將手部對準鏡頭";
   if (hands.length > 0) {
     for (let hand of hands) {
       if (hand.landmarks) {
@@ -176,12 +154,14 @@ function handleHandDetection() {
     detectionPhase = "complete"; // 切換到完成階段
     countdown = 5; // 設置完成提示的倒數時間
     countdownStartTime = millis();
+    msg = "偵測到手部，準備進入答題";
   }
+  showRightText(msg);
 }
 
 // 處理完成偵測階段邏輯
 function handleCompletionPhase() {
-  drawSpeechBubble(`已經完成偵測步驟，接下來開始回答問題 (${countdown})`);
+  let msg = `已經完成偵測步驟，接下來開始回答問題 (${countdown})`;
   if (millis() - countdownStartTime > 1000) {
     countdown--;
     countdownStartTime = millis();
@@ -191,12 +171,16 @@ function handleCompletionPhase() {
     questionCountdown = 10; // 問題倒數時間
     countdownStartTime = millis();
   }
+  showRightText(msg);
 }
 
 // 處理問題階段邏輯
 function handleQuestionPhase() {
   const currentQuestion = questions[currentQuestionIndex];
-  drawSpeechBubble(`${currentQuestion.question} (${questionCountdown})`); // 顯示問題
+  let msg = `${currentQuestion.question} (${questionCountdown})\n\n`;
+  msg += `剪刀：${currentQuestion.options.scissors}\n`;
+  msg += `石頭：${currentQuestion.options.rock}\n`;
+  msg += `布：${currentQuestion.options.paper}\n`;
 
   if (hands.length > 0) {
     for (let hand of hands) {
@@ -223,11 +207,12 @@ function handleQuestionPhase() {
     currentQuestionIndex++;
     if (currentQuestionIndex >= questions.length) detectionPhase = "finished"; // 所有問題完成
   }
+  showRightText(msg);
 }
 
 // 處理完成作答階段邏輯
 function handleFinishedPhase() {
-  drawSpeechBubble(`作答完成，你的分數為 ${score} 分`); // 顯示最終分數
+  showRightText(`作答完成，你的分數為 ${score} 分`);
 }
 
 // 處理視覺反饋邏輯
@@ -268,35 +253,4 @@ function detectGesture(landmarks) {
   // 布：四指伸直
   if (indexDist > 80 && middleDist > 80 && ringDist > 80 && pinkyDist > 80) return "paper";
   return null;
-}
-
-// 繪製對話氣泡函式
-function drawSpeechBubble(text) {
-  const bubbleWidth = 300; // 氣泡的寬度
-  const bubbleHeight = 200; // 氣泡的高度
-  const bubbleX = width - bubbleWidth - 50; // 氣泡的 X 座標
-  const bubbleY = 50; // 氣泡的 Y 座標
-  const bubbleTextX = bubbleX + bubbleWidth / 2; // 文字的 X 座標
-  const bubbleTextY = bubbleY + bubbleHeight / 2; // 文字的 Y 座標
-
-  // 繪製氣泡背景
-  fill(255);
-  stroke(0);
-  strokeWeight(2);
-  rect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 20); // 圓角矩形
-
-  // 繪製氣泡尾巴
-  beginShape();
-  vertex(bubbleX + bubbleWidth - 30, bubbleY + bubbleHeight);
-  vertex(bubbleX + bubbleWidth - 50, bubbleY + bubbleHeight + 20);
-  vertex(bubbleX + bubbleWidth - 70, bubbleY + bubbleHeight);
-  endShape(CLOSE);
-
-  // 繪製文字
-  fill(0);
-  noStroke();
-  textSize(16); // 調整文字大小
-  textAlign(CENTER, CENTER);
-  textWrap(WORD); // 啟用文字換行
-  text(text, bubbleX + 10, bubbleY + 10, bubbleWidth - 20, bubbleHeight - 20); // 限制文字範圍
 }
