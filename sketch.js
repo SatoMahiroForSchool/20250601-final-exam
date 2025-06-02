@@ -941,9 +941,10 @@ function playCrazy() {
   // --- 參數設定 ---
   crazyBallSize = 70; // 球變大
   let baseSpeed = 6;
-  let speedUpInterval = 500; // 每0.5秒加速
-  let speedUpRate = 1.2;     // 每次加速20%
-  let baseBallPerSec = 2.5;  // 每秒2.5顆球
+  let speedUpInterval = 5000; // 每5秒加速
+  let speedUpRate = 1.1;      // 每次加速10%
+  let ballGenInterval = 500;  // 每0.5秒產生球
+  let ballsPerGen = 2;        // 每次產生2顆
 
   if (!crazyGameStarted) {
     crazyBalls = [];
@@ -953,7 +954,7 @@ function playCrazy() {
     crazyGameOver = false;
     crazyBallSpeed = baseSpeed;
     crazyLastSpeedUp = millis();
-    crazyBallGenRemainder = 0;
+    crazyLastBallGen = millis();
   }
 
   // 計時
@@ -971,16 +972,9 @@ function playCrazy() {
   }
 
   // --- 出球量 ---
-  // 每秒2.5顆球，非整數時用累加法
-  if (frameCount % 60 === 0 && remain > 0) {
-    let ballsThisSec = baseBallPerSec + crazyBallGenRemainder;
-    let ballsToGen = floor(ballsThisSec);
-    crazyBallGenRemainder = ballsThisSec - ballsToGen;
-    if (crazyBallGenRemainder >= 1) {
-      ballsToGen += 1;
-      crazyBallGenRemainder -= 1;
-    }
-    for (let i = 0; i < ballsToGen; i++) {
+  if (millis() - crazyLastBallGen >= ballGenInterval && remain > 0) {
+    crazyLastBallGen += ballGenInterval;
+    for (let i = 0; i < ballsPerGen; i++) {
       let color = random() < 0.5 ? "white" : "black";
       crazyBalls.push({
         x: random(50, width - 50),
