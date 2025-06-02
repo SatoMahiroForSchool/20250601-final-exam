@@ -111,10 +111,8 @@ function draw() {
   }
 }
 
-// 右側顯示提示文字
+// 右側顯示提示文字（移除白色方框，只顯示文字）
 function showRightText(txt) {
-  fill(255);
-  rect(width - 220, 20, 200, 440, 20);
   fill(0);
   textSize(18);
   textAlign(LEFT, TOP);
@@ -134,7 +132,7 @@ function handleFaceDetection() {
     }
     if (countdown <= 0) detectionPhase = "hand"; // 切換到手部偵測階段
   }
-  showRightText(msg);
+  showRightText(msg); // 只顯示在右側
 }
 
 // 處理手部偵測邏輯
