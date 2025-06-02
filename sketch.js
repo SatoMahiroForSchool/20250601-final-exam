@@ -331,8 +331,8 @@ function isFingerOnStartButton(finger) {
   let btnW = 140;
   let btnH = 50;
   return (
-    finger[0] > 20 && finger[0] < 20 + backBtn.w &&
-    finger[1] > 20 && finger[1] < 20 + backBtn.h
+    finger[0] > btnX && finger[0] < btnX + btnW &&
+    finger[1] > btnY && finger[1] < btnY + btnH
   );
 }
 
