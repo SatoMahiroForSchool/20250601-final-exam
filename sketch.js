@@ -510,65 +510,114 @@ let easyDraggingIdx = null;
 let easyGameOver = false;
 let fingerOnEasyBack = null; // 新手模式結束畫面返回按鈕動畫
 
-function playEasy() {
-  // 結束畫面
-  if (easyGameOver) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + easyScore, width / 2, height / 2 - 30);
+// --- 全域變數（加在檔案頂部區域）---
+let crazyBallSpeed = 6;
+let crazyLastSpeedUp = 0;
+let crazyBallGenRemainder = 0;
+let crazyBallSize = 70;
 
-    // 返回選單按鈕
-    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
-    fill(255);
-    stroke(0);
-    rect(btnX, btnY, btnW, btnH, 15);
-    fill(0);
-    noStroke();
-    textSize(22);
-    text("返回選單", width / 2, btnY + btnH / 2);
+// --- 新增：結算畫面共用函式 ---
+function drawGameOverPanel(score, onRetry, onMenu, fingerOnRetry, fingerOnMenu) {
+  fill(0, 200);
+  rect(0, 0, width, height);
+  fill(255);
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  text("遊戲結束！分數：" + score, width / 2, height / 2 - 40);
 
-    // 手指動畫
-    if (hands.length > 0) {
-      let finger = hands[0].landmarks[8];
-      if (
-        finger[0] > btnX && finger[0] < btnX + btnW &&
-        finger[1] > btnY && finger[1] < btnY + btnH
-      ) {
-        if (!fingerOnEasyBack) {
-          fingerOnEasyBack = { startTime: millis(), fingerPos: finger.slice() };
-        } else {
-          fingerOnEasyBack.fingerPos = finger.slice();
-        }
-      } else {
-        fingerOnEasyBack = null;
-      }
+  // 再來一次按鈕
+  let retryX = width / 2 - 180, retryY = height / 2 + 20, btnW = 160, btnH = 60;
+  fill(255);
+  stroke(0);
+  rect(retryX, retryY, btnW, btnH, 15);
+  fill(0);
+  noStroke();
+  textSize(22);
+  text("再來一次", retryX + btnW / 2, retryY + btnH / 2);
+
+  // 返回選單按鈕
+  let menuX = width / 2 + 20, menuY = retryY;
+  fill(255);
+  stroke(0);
+  rect(menuX, menuY, btnW, btnH, 15);
+  fill(0);
+  noStroke();
+  text("返回選單", menuX + btnW / 2, menuY + btnH / 2);
+
+  // 手指動畫
+  if (hands.length > 0) {
+    let finger = hands[0].landmarks[8];
+    // 再來一次
+    if (
+      finger[0] > retryX && finger[0] < retryX + btnW &&
+      finger[1] > retryY && finger[1] < retryY + btnH
+    ) {
+      if (!fingerOnRetry.startTime) fingerOnRetry.startTime = millis();
+      fingerOnRetry.fingerPos = finger.slice();
     } else {
-      fingerOnEasyBack = null;
+      fingerOnRetry.startTime = null;
     }
-    if (fingerOnEasyBack) {
+    // 返回選單
+    if (
+      finger[0] > menuX && finger[0] < menuX + btnW &&
+      finger[1] > menuY && finger[1] < menuY + btnH
+    ) {
+      if (!fingerOnMenu.startTime) fingerOnMenu.startTime = millis();
+      fingerOnMenu.fingerPos = finger.slice();
+    } else {
+      fingerOnMenu.startTime = null;
+    }
+  } else {
+    fingerOnRetry.startTime = null;
+    fingerOnMenu.startTime = null;
+  }
+
+  // 畫動畫
+  [fingerOnRetry, fingerOnMenu].forEach((obj) => {
+    if (obj.startTime && obj.fingerPos) {
       let now = millis();
-      let progress = constrain((now - fingerOnEasyBack.startTime) / 500, 0, 1);
+      let progress = constrain((now - obj.startTime) / 3000, 0, 1);
       noFill();
       stroke(0, 255, 0);
       strokeWeight(6);
       let r = 40;
       let startA = -HALF_PI;
       arc(
-        fingerOnEasyBack.fingerPos[0], fingerOnEasyBack.fingerPos[1],
+        obj.fingerPos[0], obj.fingerPos[1],
         r, r,
         startA, startA + progress * TWO_PI
       );
       strokeWeight(1);
       if (progress >= 1) {
-        gameState = "menu";
-        easyGameStarted = false;
-        easyGameOver = false;
-        fingerOnEasyBack = null;
+        obj.startTime = null;
+        obj.fingerPos = null;
+        obj.action();
       }
     }
+  });
+}
+
+// --- 新手模式 ---
+let fingerOnEasyRetry = { startTime: null, fingerPos: null, action: null };
+let fingerOnEasyMenu = { startTime: null, fingerPos: null, action: null };
+
+function playEasy() {
+  // 結束畫面
+  if (easyGameOver) {
+    fingerOnEasyRetry.action = () => {
+      easyGameStarted = false;
+      easyGameOver = false;
+      fingerOnEasyRetry.startTime = null;
+      fingerOnEasyMenu.startTime = null;
+    };
+    fingerOnEasyMenu.action = () => {
+      gameState = "menu";
+      easyGameStarted = false;
+      easyGameOver = false;
+      fingerOnEasyRetry.startTime = null;
+      fingerOnEasyMenu.startTime = null;
+    };
+    drawGameOverPanel(easyScore, null, null, fingerOnEasyRetry, fingerOnEasyMenu);
     return;
   }
 
@@ -703,62 +752,20 @@ let normalBtnLockTime = 0; // >0時鎖定互動
 function playNormal() {
   // 結束畫面
   if (normalGameOver) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + normalScore, width / 2, height / 2 - 30);
-
-    // 返回選單按鈕
-    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
-    fill(255);
-    stroke(0);
-    rect(btnX, btnY, btnW, btnH, 15);
-    fill(0);
-    noStroke();
-    textSize(22);
-    text("返回選單", width / 2, btnY + btnH / 2);
-
-    // 手指動畫
-    if (hands.length > 0) {
-      let finger = hands[0].landmarks[8];
-      if (
-        finger[0] > btnX && finger[0] < btnX + btnW &&
-        finger[1] > btnY && finger[1] < btnY + btnH
-      ) {
-        if (!fingerOnNormalBack) {
-          fingerOnNormalBack = { startTime: millis(), fingerPos: finger.slice() };
-        } else {
-          fingerOnNormalBack.fingerPos = finger.slice();
-        }
-      } else {
-        fingerOnNormalBack = null;
-      }
-    } else {
-      fingerOnNormalBack = null;
-    }
-    if (fingerOnNormalBack) {
-      let now = millis();
-      let progress = constrain((now - fingerOnNormalBack.startTime) / 500, 0, 1);
-      noFill();
-      stroke(0, 255, 0);
-      strokeWeight(6);
-      let r = 40;
-      let startA = -HALF_PI;
-      arc(
-        fingerOnNormalBack.fingerPos[0], fingerOnNormalBack.fingerPos[1],
-        r, r,
-        startA, startA + progress * TWO_PI
-      );
-      strokeWeight(1);
-      if (progress >= 1) {
-        gameState = "menu";
-        normalGameStarted = false;
-        normalGameOver = false;
-        fingerOnNormalBack = null;
-      }
-    }
+    fingerOnNormalRetry.action = () => {
+      normalGameStarted = false;
+      normalGameOver = false;
+      fingerOnNormalRetry.startTime = null;
+      fingerOnNormalMenu.startTime = null;
+    };
+    fingerOnNormalMenu.action = () => {
+      gameState = "menu";
+      normalGameStarted = false;
+      normalGameOver = false;
+      fingerOnNormalRetry.startTime = null;
+      fingerOnNormalMenu.startTime = null;
+    };
+    drawGameOverPanel(normalScore, null, null, fingerOnNormalRetry, fingerOnNormalMenu);
     return;
   }
 
@@ -848,7 +855,7 @@ function playNormal() {
       }
       if (fingerOnNormalBtn[i]) {
         let now = millis();
-        let progress = constrain((now - fingerOnNormalBtn[i].startTime) / 3000, 0, 1);
+        let progress = constrain((now - fingerOnNormalBtn[i].startTime) / 2000, 0, 1); // 2秒
         noFill();
         stroke(0, 255, 0);
         strokeWeight(6);
@@ -908,64 +915,35 @@ let fingerOnCrazyBack = null;
 function playCrazy() {
   // 結束畫面
   if (crazyGameOver) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + crazyScore, width / 2, height / 2 - 30);
-
-    // 返回選單按鈕
-    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
-    fill(255);
-    stroke(0);
-    rect(btnX, btnY, btnW, btnH, 15);
-    fill(0);
-    noStroke();
-    textSize(22);
-    text("返回選單", width / 2, btnY + btnH / 2);
-
-    // 手指動畫
-    if (hands.length > 0) {
-      let finger = hands[0].landmarks[8];
-      if (
-        finger[0] > btnX && finger[0] < btnX + btnW &&
-        finger[1] > btnY && finger[1] < btnY + btnH
-      ) {
-        if (!fingerOnCrazyBack) {
-          fingerOnCrazyBack = { startTime: millis(), fingerPos: finger.slice() };
-        } else {
-          fingerOnCrazyBack.fingerPos = finger.slice();
-        }
-      } else {
-        fingerOnCrazyBack = null;
-      }
-    } else {
-      fingerOnCrazyBack = null;
-    }
-    if (fingerOnCrazyBack) {
-      let now = millis();
-      let progress = constrain((now - fingerOnCrazyBack.startTime) / 500, 0, 1);
-      noFill();
-      stroke(0, 255, 0);
-      strokeWeight(6);
-      let r = 40;
-      let startA = -HALF_PI;
-      arc(
-        fingerOnCrazyBack.fingerPos[0], fingerOnCrazyBack.fingerPos[1],
-        r, r,
-        startA, startA + progress * TWO_PI
-      );
-      strokeWeight(1);
-      if (progress >= 1) {
-        gameState = "menu";
-        crazyGameStarted = false;
-        crazyGameOver = false;
-        fingerOnCrazyBack = null;
-      }
-    }
+    fingerOnCrazyRetry.action = () => {
+      crazyGameStarted = false;
+      crazyGameOver = false;
+      crazyBallSpeed = 6;
+      crazyLastSpeedUp = 0;
+      crazyBallGenRemainder = 0;
+      fingerOnCrazyRetry.startTime = null;
+      fingerOnCrazyMenu.startTime = null;
+    };
+    fingerOnCrazyMenu.action = () => {
+      gameState = "menu";
+      crazyGameStarted = false;
+      crazyGameOver = false;
+      crazyBallSpeed = 6;
+      crazyLastSpeedUp = 0;
+      crazyBallGenRemainder = 0;
+      fingerOnCrazyRetry.startTime = null;
+      fingerOnCrazyMenu.startTime = null;
+    };
+    drawGameOverPanel(crazyScore, null, null, fingerOnCrazyRetry, fingerOnCrazyMenu);
     return;
   }
+
+  // --- 參數設定 ---
+  crazyBallSize = 70; // 球變大
+  let baseSpeed = 6;
+  let speedUpInterval = 500; // 每0.5秒加速
+  let speedUpRate = 1.2;     // 每次加速20%
+  let baseBallPerSec = 2.5;  // 每秒2.5顆球
 
   if (!crazyGameStarted) {
     crazyBalls = [];
@@ -973,6 +951,9 @@ function playCrazy() {
     crazyTimer = millis();
     crazyGameStarted = true;
     crazyGameOver = false;
+    crazyBallSpeed = baseSpeed;
+    crazyLastSpeedUp = millis();
+    crazyBallGenRemainder = 0;
   }
 
   // 計時
@@ -983,15 +964,31 @@ function playCrazy() {
   text("剩餘時間：" + remain + " 秒", 20, 80);
   text("分數：" + crazyScore, 20, 110);
 
-  // 產生新球
-  if (frameCount % 20 === 0 && remain > 0) {
-    let color = random() < 0.5 ? "white" : "black";
-    crazyBalls.push({
-      x: random(50, width - 50),
-      y: -30,
-      color: color,
-      caught: false
-    });
+  // --- 動態加速 ---
+  if (millis() - crazyLastSpeedUp >= speedUpInterval) {
+    crazyBallSpeed *= speedUpRate;
+    crazyLastSpeedUp += speedUpInterval;
+  }
+
+  // --- 出球量 ---
+  // 每秒2.5顆球，非整數時用累加法
+  if (frameCount % 60 === 0 && remain > 0) {
+    let ballsThisSec = baseBallPerSec + crazyBallGenRemainder;
+    let ballsToGen = floor(ballsThisSec);
+    crazyBallGenRemainder = ballsThisSec - ballsToGen;
+    if (crazyBallGenRemainder >= 1) {
+      ballsToGen += 1;
+      crazyBallGenRemainder -= 1;
+    }
+    for (let i = 0; i < ballsToGen; i++) {
+      let color = random() < 0.5 ? "white" : "black";
+      crazyBalls.push({
+        x: random(50, width - 50),
+        y: -crazyBallSize / 2,
+        color: color,
+        caught: false
+      });
+    }
   }
 
   // 畫球並下落
@@ -999,8 +996,8 @@ function playCrazy() {
     if (!b.caught) {
       fill(b.color === "white" ? 255 : 0);
       stroke(0);
-      ellipse(b.x, b.y, 40, 40);
-      b.y += 6;
+      ellipse(b.x, b.y, crazyBallSize, crazyBallSize);
+      b.y += crazyBallSpeed;
     }
   }
 
@@ -1011,7 +1008,7 @@ function playCrazy() {
       if (
         !b.caught &&
         b.color === "white" &&
-        dist(finger[0], finger[1], b.x, b.y) < 30
+        dist(finger[0], finger[1], b.x, b.y) < crazyBallSize / 2 - 5
       ) {
         b.caught = true;
         crazyScore++;
@@ -1020,18 +1017,10 @@ function playCrazy() {
   }
 
   // 移除已掉出畫面或已攔截的球
-  crazyBalls = crazyBalls.filter(b => b.y < height + 30 && !b.caught);
+  crazyBalls = crazyBalls.filter(b => b.y < height + crazyBallSize && !b.caught);
 
   // 時間到
   if (remain <= 0) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + crazyScore, width / 2, height / 2);
-    textSize(20);
-    text("請點擊返回選單", width / 2, height / 2 + 40);
-    if (hands.length === 0) crazyGameStarted = false;
+    crazyGameOver = true;
   }
 }
