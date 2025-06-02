@@ -12,6 +12,10 @@ let buttons = [
 
 // 手指碰觸按鈕的動畫狀態
 let fingerOnBtn = null; // {btnIndex, startTime, fingerPos}
+let fingerOnBack = null; // {startTime, fingerPos}
+
+// 返回選單按鈕設定
+const backBtn = { x: 480, y: 400, w: 140, h: 60, label: "返回選單" };
 
 function setup() {
   createCanvas(640, 480);
@@ -42,6 +46,9 @@ function draw() {
   if (video.loadedmetadata && video.width > 0 && video.height > 0) {
     image(video, 0, 0, width, height);
 
+    // 右上角提示（不是按鈕）
+    drawTopRightHint();
+
     if (gameState === "menu") {
       drawMenuButtons();
 
@@ -58,6 +65,21 @@ function draw() {
         fingerOnBtn = null;
       }
       return;
+    } else {
+      // 遊戲主流程右下角顯示返回選單按鈕
+      drawBackButton();
+
+      // 手指碰觸返回按鈕偵測與動畫
+      if (hands.length > 0) {
+        let fingerTip = hands[0].landmarks[8];
+        if (isFingerOnBackButton(fingerTip)) {
+          handleBackButton(fingerTip);
+        } else {
+          fingerOnBack = null;
+        }
+      } else {
+        fingerOnBack = null;
+      }
     }
   } else {
     // 攝影機尚未就緒時顯示提示
@@ -116,17 +138,19 @@ function draw() {
   }
 }
 
-// 畫出中央偏上的三個上下排列按鈕與標題
-function drawMenuButtons() {
-  // 右上角提示
-  fill(255, 240);
+// 右上角提示
+function drawTopRightHint() {
+  fill(255);
   noStroke();
   rect(width - 320, 20, 300, 40, 10);
   fill(0);
   textSize(18);
   textAlign(LEFT, CENTER);
   text("將手指移動到按鈕上0.5秒以做操作", width - 310, 40);
+}
 
+// 畫出中央偏上的三個上下排列按鈕與標題
+function drawMenuButtons() {
   // 中央偏上標題
   textAlign(CENTER, CENTER);
   textSize(32);
@@ -163,14 +187,43 @@ function drawMenuButtons() {
     strokeWeight(1);
     // 畫滿就觸發按鈕
     if (progress >= 1) {
-      if (fingerOnBtn.btnIndex === 0) {
-        gameState = "play"; // 新手模式
-      } else if (fingerOnBtn.btnIndex === 1) {
-        gameState = "play"; // 一般模式
-      } else if (fingerOnBtn.btnIndex === 2) {
-        gameState = "play"; // 瘋狂模式
-      }
+      gameState = "play";
       fingerOnBtn = null;
+    }
+  }
+}
+
+// 右下角返回選單按鈕
+function drawBackButton() {
+  // 按鈕外觀
+  fill(255);
+  stroke(0);
+  rect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 15);
+  fill(0);
+  noStroke();
+  textSize(22);
+  textAlign(CENTER, CENTER);
+  text(backBtn.label, backBtn.x + backBtn.w / 2, backBtn.y + backBtn.h / 2);
+
+  // 若有手指動畫，畫出綠色圓圈進度
+  if (fingerOnBack) {
+    let now = millis();
+    let progress = constrain((now - fingerOnBack.startTime) / 500, 0, 1); // 0.5秒
+    noFill();
+    stroke(0, 255, 0);
+    strokeWeight(6);
+    let r = 40;
+    let startA = -HALF_PI;
+    arc(
+      fingerOnBack.fingerPos[0], fingerOnBack.fingerPos[1],
+      r, r,
+      startA, startA + progress * TWO_PI
+    );
+    strokeWeight(1);
+    // 畫滿就觸發返回
+    if (progress >= 1) {
+      gameState = "menu";
+      fingerOnBack = null;
     }
   }
 }
@@ -189,7 +242,15 @@ function isFingerOnButton(finger) {
   return null;
 }
 
-// 控制手指動畫進度
+// 判斷手指是否在返回按鈕上
+function isFingerOnBackButton(finger) {
+  return (
+    finger[0] > backBtn.x && finger[0] < backBtn.x + backBtn.w &&
+    finger[1] > backBtn.y && finger[1] < backBtn.y + backBtn.h
+  );
+}
+
+// 控制手指動畫進度（主選單按鈕）
 function handleHandButton(btnIndex, fingerPos) {
   if (
     !fingerOnBtn ||
@@ -205,6 +266,21 @@ function handleHandButton(btnIndex, fingerPos) {
   } else {
     // 更新手指位置
     fingerOnBtn.fingerPos = fingerPos.slice();
+  }
+}
+
+// 控制手指動畫進度（返回按鈕）
+function handleBackButton(fingerPos) {
+  if (
+    !fingerOnBack ||
+    dist(fingerOnBack.fingerPos[0], fingerOnBack.fingerPos[1], fingerPos[0], fingerPos[1]) > 30
+  ) {
+    fingerOnBack = {
+      startTime: millis(),
+      fingerPos: fingerPos.slice()
+    };
+  } else {
+    fingerOnBack.fingerPos = fingerPos.slice();
   }
 }
 
