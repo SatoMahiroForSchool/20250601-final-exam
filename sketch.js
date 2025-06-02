@@ -138,12 +138,10 @@ function draw() {
   }
 }
 
-// 右上角提示
+// 右上角提示（只顯示純文字，無方框）
 function drawTopRightHint() {
   fill(255);
   noStroke();
-  rect(width - 320, 20, 300, 40, 10);
-  fill(0);
   textSize(18);
   textAlign(LEFT, CENTER);
   text("將手指移動到按鈕上0.5秒以做操作", width - 310, 40);
@@ -198,12 +196,12 @@ function drawBackButton() {
   // 按鈕外觀
   fill(255);
   stroke(0);
-  rect(backBtn.x, backBtn.y, backBtn.w, backBtn.h, 15);
+  rect(20, 20, backBtn.w, backBtn.h, 15);
   fill(0);
   noStroke();
   textSize(22);
   textAlign(CENTER, CENTER);
-  text(backBtn.label, backBtn.x + backBtn.w / 2, backBtn.y + backBtn.h / 2);
+  text(backBtn.label, 20 + backBtn.w / 2, 20 + backBtn.h / 2);
 
   // 若有手指動畫，畫出綠色圓圈進度
   if (fingerOnBack) {
@@ -242,11 +240,11 @@ function isFingerOnButton(finger) {
   return null;
 }
 
-// 判斷手指是否在返回按鈕上
+// 判斷手指是否在返回按鈕上（左上角）
 function isFingerOnBackButton(finger) {
   return (
-    finger[0] > backBtn.x && finger[0] < backBtn.x + backBtn.w &&
-    finger[1] > backBtn.y && finger[1] < backBtn.y + backBtn.h
+    finger[0] > 20 && finger[0] < 20 + backBtn.w &&
+    finger[1] > 20 && finger[1] < 20 + backBtn.h
   );
 }
 
