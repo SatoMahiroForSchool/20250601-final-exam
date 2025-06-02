@@ -588,7 +588,7 @@ function drawGameOverPanel(score, onRetry, onMenu, fingerOnRetry, fingerOnMenu) 
     fingerOnMenu.startTime = null;
   }
 
-  // 畫動畫與觸發
+  // 畫動畫與觸發（停留時間改為2秒）
   [fingerOnRetry, fingerOnMenu].forEach((obj) => {
     if (obj.startTime && obj.fingerPos) {
       let now = millis();
@@ -738,9 +738,64 @@ function playEasy() {
   if (remain <= 0 || easyBalls.length === 0) {
     easyGameOver = true;
   }
+
+  // --- 新增：結束後返回選單按鈕 ---
+  if (easyGameOver) {
+    // 按鈕參數
+    let btnX = width / 2 - 80, btnY = height / 2 + 40, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    textAlign(CENTER, CENTER);
+    text("返回選單", btnX + btnW / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnEasyBack) {
+          fingerOnEasyBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnEasyBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnEasyBack = null;
+      }
+    } else {
+      fingerOnEasyBack = null;
+    }
+    if (fingerOnEasyBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnEasyBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnEasyBack.fingerPos[0], fingerOnEasyBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        easyGameStarted = false;
+        easyGameOver = false;
+        fingerOnEasyBack = null;
+      }
+    }
+    return;
+  }
 }
 
-// --- 一般模式：選英文單字 ---
+// --- 一般模式 ---
 let normalWords = [
   { q: "蘋果", a: "apple" },
   { q: "香蕉", a: "banana" },
@@ -922,6 +977,61 @@ function playNormal() {
   if (remain <= 0) {
     normalGameOver = true;
   }
+
+  // --- 新增：結束後返回選單按鈕 ---
+  if (normalGameOver) {
+    // 按鈕參數
+    let btnX = width / 2 - 80, btnY = height / 2 + 40, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    textAlign(CENTER, CENTER);
+    text("返回選單", btnX + btnW / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnNormalBack) {
+          fingerOnNormalBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnNormalBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnNormalBack = null;
+      }
+    } else {
+      fingerOnNormalBack = null;
+    }
+    if (fingerOnNormalBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnNormalBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnNormalBack.fingerPos[0], fingerOnNormalBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        normalGameStarted = false;
+        normalGameOver = false;
+        fingerOnNormalBack = null;
+      }
+    }
+    return;
+  }
 }
 
 // --- 瘋狂模式：攔截白球 ---
@@ -1036,5 +1146,60 @@ function playCrazy() {
   // 時間到
   if (remain <= 0) {
     crazyGameOver = true;
+  }
+
+  // --- 新增：結束後返回選單按鈕 ---
+  if (crazyGameOver) {
+    // 按鈕參數
+    let btnX = width / 2 - 80, btnY = height / 2 + 40, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    textAlign(CENTER, CENTER);
+    text("返回選單", btnX + btnW / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnCrazyBack) {
+          fingerOnCrazyBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnCrazyBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnCrazyBack = null;
+      }
+    } else {
+      fingerOnCrazyBack = null;
+    }
+    if (fingerOnCrazyBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnCrazyBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnCrazyBack.fingerPos[0], fingerOnCrazyBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        crazyGameStarted = false;
+        crazyGameOver = false;
+        fingerOnCrazyBack = null;
+      }
+    }
+    return;
   }
 }
