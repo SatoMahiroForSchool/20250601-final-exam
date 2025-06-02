@@ -232,18 +232,27 @@ function drawIntro(idx) {
   noStroke();
   rect(width / 2 - 220, height / 2 - 120, 440, 220, 30);
 
-  // 說明文字
+  // 說明標題
   fill(0);
-  textAlign(CENTER, TOP); // 讓文字從方塊內上方開始
+  textAlign(CENTER, TOP);
   textSize(24);
-  text("說明", width / 2, height / 2 - 100); // 標題往上移一點
+  text("說明", width / 2, height / 2 - 100);
+
+  // 說明文字區塊（略小於白色方塊，並靠左上角）
+  let textBoxX = width / 2 - 200;
+  let textBoxY = height / 2 - 60;
+  let textBoxW = 400;
+  let textBoxH = 80;
+
+  fill(0);
+  textAlign(LEFT, TOP);
   textSize(20);
   text(
     introTexts[idx],
-    width / 2,
-    height / 2 - 60, // 讓說明文字在方塊內更置中
-    400,
-    80 // 限制高度，避免超出方塊
+    textBoxX,
+    textBoxY,
+    textBoxW,
+    textBoxH
   );
 
   // 開始按鈕
