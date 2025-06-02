@@ -507,24 +507,103 @@ let easyScore = 0;
 let easyTimer = 0;
 let easyGameStarted = false;
 let easyDraggingIdx = null;
+let easyGameOver = false;
+let fingerOnEasyBack = null; // 新手模式結束畫面返回按鈕動畫
 
 function playEasy() {
+  // 結束畫面
+  if (easyGameOver) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + easyScore, width / 2, height / 2 - 30);
+
+    // 返回選單按鈕
+    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    text("返回選單", width / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnEasyBack) {
+          fingerOnEasyBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnEasyBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnEasyBack = null;
+      }
+    } else {
+      fingerOnEasyBack = null;
+    }
+    if (fingerOnEasyBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnEasyBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnEasyBack.fingerPos[0], fingerOnEasyBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        easyGameStarted = false;
+        easyGameOver = false;
+        fingerOnEasyBack = null;
+      }
+    }
+    return;
+  }
+
   if (!easyGameStarted) {
-    // 初始化
+    // 初始化：每種顏色5顆，不重疊，球大一點
     easyBalls = [];
     let colors = ["red", "green", "blue"];
-    for (let i = 0; i < 3; i++) {
-      easyBalls.push({
-        x: random(100, 540),
-        y: random(100, 250),
-        color: colors[i],
-        dragging: false
-      });
+    let placed = [];
+    let radius = 38;
+    for (let c = 0; c < 3; c++) {
+      let color = colors[c];
+      let count = 0;
+      while (count < 5) {
+        let tryX = random(80, 560);
+        let tryY = random(100, 250);
+        let overlap = false;
+        for (let b of placed) {
+          if (dist(tryX, tryY, b.x, b.y) < radius * 2 + 8) {
+            overlap = true;
+            break;
+          }
+        }
+        if (!overlap) {
+          let ball = { x: tryX, y: tryY, color: color, dragging: false };
+          easyBalls.push(ball);
+          placed.push(ball);
+          count++;
+        }
+      }
     }
     easyScore = 0;
     easyTimer = millis();
     easyGameStarted = true;
     easyDraggingIdx = null;
+    easyGameOver = false;
   }
 
   // 計時
@@ -539,7 +618,7 @@ function playEasy() {
   for (let t of easyTargets) {
     fill(t.color);
     stroke(0);
-    ellipse(t.x, t.y, 80, 80);
+    ellipse(t.x, t.y, 90, 90);
   }
   fill(0);
   textSize(18);
@@ -553,7 +632,7 @@ function playEasy() {
     let b = easyBalls[i];
     fill(b.color);
     stroke(0);
-    ellipse(b.x, b.y, 50, 50);
+    ellipse(b.x, b.y, 76, 76);
   }
 
   // 手指拖曳
@@ -567,7 +646,7 @@ function playEasy() {
       let b = easyBalls[easyDraggingIdx];
       for (let t of easyTargets) {
         if (
-          dist(b.x, b.y, t.x, t.y) < 50 &&
+          dist(b.x, b.y, t.x, t.y) < 65 &&
           b.color === t.color
         ) {
           easyScore++;
@@ -581,7 +660,7 @@ function playEasy() {
       // 檢查是否點到球
       for (let i = 0; i < easyBalls.length; i++) {
         let b = easyBalls[i];
-        if (dist(finger[0], finger[1], b.x, b.y) < 30) {
+        if (dist(finger[0], finger[1], b.x, b.y) < 40) {
           easyDraggingIdx = i;
           break;
         }
@@ -593,15 +672,7 @@ function playEasy() {
 
   // 時間到或球全放完
   if (remain <= 0 || easyBalls.length === 0) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + easyScore, width / 2, height / 2);
-    textSize(20);
-    text("請點擊返回選單", width / 2, height / 2 + 40);
-    if (hands.length === 0) easyGameStarted = false; // 等待手離開重設
+    easyGameOver = true;
   }
 }
 
@@ -610,15 +681,85 @@ let normalWords = [
   { q: "蘋果", a: "apple" },
   { q: "香蕉", a: "banana" },
   { q: "貓", a: "cat" },
-  { q: "狗", a: "dog" }
+  { q: "狗", a: "dog" },
+  { q: "書", a: "book" },
+  { q: "桌子", a: "table" },
+  { q: "椅子", a: "chair" },
+  { q: "魚", a: "fish" },
+  { q: "鳥", a: "bird" },
+  { q: "太陽", a: "sun" }
 ];
 let normalCurrent = null;
 let normalOptions = [];
 let normalScore = 0;
 let normalTimer = 0;
 let normalGameStarted = false;
+let normalGameOver = false;
+let fingerOnNormalBtn = [null, null, null, null];
+let fingerOnNormalBack = null;
 
 function playNormal() {
+  // 結束畫面
+  if (normalGameOver) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + normalScore, width / 2, height / 2 - 30);
+
+    // 返回選單按鈕
+    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    text("返回選單", width / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnNormalBack) {
+          fingerOnNormalBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnNormalBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnNormalBack = null;
+      }
+    } else {
+      fingerOnNormalBack = null;
+    }
+    if (fingerOnNormalBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnNormalBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnNormalBack.fingerPos[0], fingerOnNormalBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        normalGameStarted = false;
+        normalGameOver = false;
+        fingerOnNormalBack = null;
+      }
+    }
+    return;
+  }
+
   if (!normalGameStarted) {
     // 初始化
     normalCurrent = floor(random(normalWords.length));
@@ -634,6 +775,8 @@ function playNormal() {
     normalScore = 0;
     normalTimer = millis();
     normalGameStarted = true;
+    normalGameOver = false;
+    fingerOnNormalBtn = [null, null, null, null];
   }
 
   // 計時
@@ -650,11 +793,15 @@ function playNormal() {
   textAlign(CENTER, TOP);
   text("請選出「" + normalWords[normalCurrent].q + "」的英文", width / 2, 140);
 
-  // 選項按鈕
-  let btnW = 180, btnH = 50;
-  let btnY = 220;
+  // 2x2選項按鈕（兩行兩列，置中且不接觸）
+  let btnW = 180, btnH = 60;
+  let gapX = 40, gapY = 30;
+  let startX = width / 2 - btnW - gapX / 2;
+  let startY = 220;
   for (let i = 0; i < 4; i++) {
-    let btnX = width / 2 - 200 + i * 130;
+    let row = floor(i / 2), col = i % 2;
+    let btnX = startX + col * (btnW + gapX);
+    let btnY = startY + row * (btnH + gapY);
     fill(255);
     stroke(0);
     rect(btnX, btnY, btnW, btnH, 12);
@@ -663,47 +810,60 @@ function playNormal() {
     textSize(22);
     textAlign(CENTER, CENTER);
     text(normalOptions[i], btnX + btnW / 2, btnY + btnH / 2);
-  }
 
-  // 手指選擇
-  if (hands.length > 0) {
-    let finger = hands[0].landmarks[8];
-    for (let i = 0; i < 4; i++) {
-      let btnX = width / 2 - 200 + i * 130;
+    // 手指偵測與0.5秒動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
       if (
         finger[0] > btnX && finger[0] < btnX + btnW &&
         finger[1] > btnY && finger[1] < btnY + btnH
       ) {
-        // 答對
-        if (normalOptions[i] === normalWords[normalCurrent].a) {
-          normalScore++;
+        if (!fingerOnNormalBtn[i]) {
+          fingerOnNormalBtn[i] = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnNormalBtn[i].fingerPos = finger.slice();
         }
-        // 換下一題
-        normalCurrent = floor(random(normalWords.length));
-        let correct = normalWords[normalCurrent].a;
-        let options = [correct];
-        while (options.length < 4) {
-          let w = normalWords[floor(random(normalWords.length))].a;
-          if (!options.includes(w)) options.push(w);
+      } else {
+        fingerOnNormalBtn[i] = null;
+      }
+      if (fingerOnNormalBtn[i]) {
+        let now = millis();
+        let progress = constrain((now - fingerOnNormalBtn[i].startTime) / 500, 0, 1);
+        noFill();
+        stroke(0, 255, 0);
+        strokeWeight(6);
+        let r = 40;
+        let startA = -HALF_PI;
+        arc(
+          fingerOnNormalBtn[i].fingerPos[0], fingerOnNormalBtn[i].fingerPos[1],
+          r, r,
+          startA, startA + progress * TWO_PI
+        );
+        strokeWeight(1);
+        if (progress >= 1) {
+          // 答對
+          if (normalOptions[i] === normalWords[normalCurrent].a) {
+            normalScore++;
+          }
+          // 換下一題
+          normalCurrent = floor(random(normalWords.length));
+          let correct = normalWords[normalCurrent].a;
+          let options = [correct];
+          while (options.length < 4) {
+            let w = normalWords[floor(random(normalWords.length))].a;
+            if (!options.includes(w)) options.push(w);
+          }
+          shuffle(options, true);
+          normalOptions = options;
+          fingerOnNormalBtn = [null, null, null, null];
         }
-        shuffle(options, true);
-        normalOptions = options;
-        break;
       }
     }
   }
 
   // 時間到
   if (remain <= 0) {
-    fill(0, 200);
-    rect(0, 0, width, height);
-    fill(255);
-    textSize(32);
-    textAlign(CENTER, CENTER);
-    text("遊戲結束！分數：" + normalScore, width / 2, height / 2);
-    textSize(20);
-    text("請點擊返回選單", width / 2, height / 2 + 40);
-    if (hands.length === 0) normalGameStarted = false;
+    normalGameOver = true;
   }
 }
 
@@ -712,13 +872,77 @@ let crazyBalls = [];
 let crazyScore = 0;
 let crazyTimer = 0;
 let crazyGameStarted = false;
+let crazyGameOver = false;
+let fingerOnCrazyBack = null;
 
 function playCrazy() {
+  // 結束畫面
+  if (crazyGameOver) {
+    fill(0, 200);
+    rect(0, 0, width, height);
+    fill(255);
+    textSize(32);
+    textAlign(CENTER, CENTER);
+    text("遊戲結束！分數：" + crazyScore, width / 2, height / 2 - 30);
+
+    // 返回選單按鈕
+    let btnX = width / 2 - 80, btnY = height / 2 + 20, btnW = 160, btnH = 60;
+    fill(255);
+    stroke(0);
+    rect(btnX, btnY, btnW, btnH, 15);
+    fill(0);
+    noStroke();
+    textSize(22);
+    text("返回選單", width / 2, btnY + btnH / 2);
+
+    // 手指動畫
+    if (hands.length > 0) {
+      let finger = hands[0].landmarks[8];
+      if (
+        finger[0] > btnX && finger[0] < btnX + btnW &&
+        finger[1] > btnY && finger[1] < btnY + btnH
+      ) {
+        if (!fingerOnCrazyBack) {
+          fingerOnCrazyBack = { startTime: millis(), fingerPos: finger.slice() };
+        } else {
+          fingerOnCrazyBack.fingerPos = finger.slice();
+        }
+      } else {
+        fingerOnCrazyBack = null;
+      }
+    } else {
+      fingerOnCrazyBack = null;
+    }
+    if (fingerOnCrazyBack) {
+      let now = millis();
+      let progress = constrain((now - fingerOnCrazyBack.startTime) / 500, 0, 1);
+      noFill();
+      stroke(0, 255, 0);
+      strokeWeight(6);
+      let r = 40;
+      let startA = -HALF_PI;
+      arc(
+        fingerOnCrazyBack.fingerPos[0], fingerOnCrazyBack.fingerPos[1],
+        r, r,
+        startA, startA + progress * TWO_PI
+      );
+      strokeWeight(1);
+      if (progress >= 1) {
+        gameState = "menu";
+        crazyGameStarted = false;
+        crazyGameOver = false;
+        fingerOnCrazyBack = null;
+      }
+    }
+    return;
+  }
+
   if (!crazyGameStarted) {
     crazyBalls = [];
     crazyScore = 0;
     crazyTimer = millis();
     crazyGameStarted = true;
+    crazyGameOver = false;
   }
 
   // 計時
