@@ -4,8 +4,11 @@ let facemesh;
 let handpose;
 let hands = [];
 let gameState = "menu"; // "menu" or "play"
-let button1 = { x: 170, y: 200, w: 140, h: 60, label: "開始遊戲" };
-let button2 = { x: 330, y: 200, w: 140, h: 60, label: "說明" };
+let buttons = [
+  { x: 250, y: 170, w: 140, h: 60, label: "新手模式" },
+  { x: 250, y: 250, w: 140, h: 60, label: "一般模式" },
+  { x: 250, y: 330, w: 140, h: 60, label: "瘋狂模式" }
+];
 
 // 手指碰觸按鈕的動畫狀態
 let fingerOnBtn = null; // {btnIndex, startTime, fingerPos}
@@ -33,27 +36,39 @@ function setup() {
 }
 
 function draw() {
-  image(video, 0, 0, width, height);
+  background(0);
 
-  if (gameState === "menu") {
-    drawMenuButtons();
+  // 攝影機畫面成功顯示後才顯示UI
+  if (video.loadedmetadata && video.width > 0 && video.height > 0) {
+    image(video, 0, 0, width, height);
 
-    // 手指碰觸按鈕偵測與動畫
-    if (hands.length > 0) {
-      let fingerTip = hands[0].landmarks[8]; // 取第一隻手的食指指尖
-      let btnIdx = isFingerOnButton(fingerTip);
-      if (btnIdx !== null) {
-        handleHandButton(btnIdx, fingerTip);
+    if (gameState === "menu") {
+      drawMenuButtons();
+
+      // 手指碰觸按鈕偵測與動畫
+      if (hands.length > 0) {
+        let fingerTip = hands[0].landmarks[8]; // 取第一隻手的食指指尖
+        let btnIdx = isFingerOnButton(fingerTip);
+        if (btnIdx !== null) {
+          handleHandButton(btnIdx, fingerTip);
+        } else {
+          fingerOnBtn = null; // 離開按鈕就重置
+        }
       } else {
-        fingerOnBtn = null; // 離開按鈕就重置
+        fingerOnBtn = null;
       }
-    } else {
-      fingerOnBtn = null;
+      return;
     }
+  } else {
+    // 攝影機尚未就緒時顯示提示
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(28);
+    text("正在啟動攝影機...", width / 2, height / 2);
     return;
   }
 
-  // ...以下為你的遊戲主流程（可保留原本的臉部與手勢偵測）...
+  // ...以下為你的遊戲主流程...
   noFill();
   strokeWeight(3);
 
@@ -101,24 +116,35 @@ function draw() {
   }
 }
 
-// 畫出中央兩個按鈕
+// 畫出中央偏上的三個上下排列按鈕與標題
 function drawMenuButtons() {
+  // 右上角提示
+  fill(255, 240);
+  noStroke();
+  rect(width - 320, 20, 300, 40, 10);
+  fill(0);
+  textSize(18);
+  textAlign(LEFT, CENTER);
+  text("將手指移動到按鈕上0.5秒以做操作", width - 310, 40);
+
+  // 中央偏上標題
   textAlign(CENTER, CENTER);
-  textSize(28);
-  // 按鈕1
-  fill(255);
-  stroke(0);
-  rect(button1.x, button1.y, button1.w, button1.h, 15);
-  fill(0);
+  textSize(32);
+  fill(0, 102, 204);
   noStroke();
-  text(button1.label, button1.x + button1.w / 2, button1.y + button1.h / 2);
-  // 按鈕2
-  fill(255);
-  stroke(0);
-  rect(button2.x, button2.y, button2.w, button2.h, 15);
-  fill(0);
-  noStroke();
-  text(button2.label, button2.x + button2.w / 2, button2.y + button2.h / 2);
+  text("記憶遊戲", width / 2, 120);
+
+  // 按鈕
+  textSize(24);
+  for (let i = 0; i < buttons.length; i++) {
+    let btn = buttons[i];
+    fill(255);
+    stroke(0);
+    rect(btn.x, btn.y, btn.w, btn.h, 15);
+    fill(0);
+    noStroke();
+    text(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2);
+  }
 
   // 若有手指動畫，畫出綠色圓圈進度
   if (fingerOnBtn) {
@@ -138,20 +164,21 @@ function drawMenuButtons() {
     // 畫滿就觸發按鈕
     if (progress >= 1) {
       if (fingerOnBtn.btnIndex === 0) {
-        gameState = "play";
+        gameState = "play"; // 新手模式
       } else if (fingerOnBtn.btnIndex === 1) {
-        alert("這裡可以放遊戲說明！");
+        gameState = "play"; // 一般模式
+      } else if (fingerOnBtn.btnIndex === 2) {
+        gameState = "play"; // 瘋狂模式
       }
       fingerOnBtn = null;
     }
   }
 }
 
-// 判斷手指是否在按鈕上，回傳按鈕index（0或1），否則回傳null
+// 判斷手指是否在按鈕上，回傳按鈕index（0~2），否則回傳null
 function isFingerOnButton(finger) {
-  let btns = [button1, button2];
-  for (let i = 0; i < btns.length; i++) {
-    let b = btns[i];
+  for (let i = 0; i < buttons.length; i++) {
+    let b = buttons[i];
     if (
       finger[0] > b.x && finger[0] < b.x + b.w &&
       finger[1] > b.y && finger[1] < b.y + b.h
