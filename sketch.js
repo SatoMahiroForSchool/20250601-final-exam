@@ -247,13 +247,9 @@ function drawIntro(idx) {
   fill(0);
   textAlign(LEFT, TOP);
   textSize(20);
-  text(
-    introTexts[idx],
-    textBoxX,
-    textBoxY,
-    textBoxW,
-    textBoxH
-  );
+
+  // 自動換行顯示說明文字
+  drawWrappedText(introTexts[idx], textBoxX, textBoxY, textBoxW, textBoxH);
 
   // 開始按鈕
   let btnX = width / 2 - 70;
@@ -288,6 +284,29 @@ function drawIntro(idx) {
       gameState = "play";
       fingerOnStart = null;
     }
+  }
+}
+
+// 工具函式：自動換行繪製文字
+function drawWrappedText(txt, x, y, w, h) {
+  let words = txt.split('');
+  let line = '';
+  let lines = [];
+  for (let i = 0; i < words.length; i++) {
+    let testLine = line + words[i];
+    let testWidth = textWidth(testLine);
+    if (testWidth > w && line.length > 0) {
+      lines.push(line);
+      line = words[i];
+    } else {
+      line = testLine;
+    }
+  }
+  if (line.length > 0) lines.push(line);
+
+  let lineHeight = 26;
+  for (let i = 0; i < lines.length && i * lineHeight < h; i++) {
+    text(lines[i], x, y + i * lineHeight);
   }
 }
 
