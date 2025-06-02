@@ -174,11 +174,20 @@ function draw() {
 
 // 右上角提示（只顯示純文字，無方框）
 function drawTopRightHint() {
-  fill(255);
+  // 白色半透明底框
+  fill(255, 230);
   noStroke();
+  let boxW = 320;
+  let boxH = 38;
+  let boxX = width - boxW - 20;
+  let boxY = 20;
+  rect(boxX, boxY, boxW, boxH, 12);
+
+  // 黑色文字
+  fill(0);
   textSize(18);
   textAlign(LEFT, CENTER);
-  text("將手指移動到按鈕上0.5秒以做操作", width - 310, 40);
+  text("將手指移動到按鈕上0.5秒以做操作", boxX + 16, boxY + boxH / 2);
 }
 
 // 畫出中央偏上的三個上下排列按鈕與標題
@@ -395,6 +404,7 @@ function drawBackButton() {
       startA, startA + progress * TWO_PI
     );
     strokeWeight(1);
+    // 無論目前在哪個頁面，返回都直接回主選單
     if (progress >= 1) {
       gameState = "menu";
       fingerOnBack = null;
