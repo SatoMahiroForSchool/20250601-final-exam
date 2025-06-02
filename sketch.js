@@ -234,11 +234,17 @@ function drawIntro(idx) {
 
   // 說明文字
   fill(0);
-  textAlign(CENTER, CENTER);
+  textAlign(CENTER, TOP); // 讓文字從方塊內上方開始
   textSize(24);
-  text("說明", width / 2, height / 2 - 70);
+  text("說明", width / 2, height / 2 - 100); // 標題往上移一點
   textSize(20);
-  text(introTexts[idx], width / 2, height / 2 - 10, 400, 100);
+  text(
+    introTexts[idx],
+    width / 2,
+    height / 2 - 60, // 讓說明文字在方塊內更置中
+    400,
+    80 // 限制高度，避免超出方塊
+  );
 
   // 開始按鈕
   let btnX = width / 2 - 70;
@@ -251,6 +257,7 @@ function drawIntro(idx) {
   fill(0);
   noStroke();
   textSize(22);
+  textAlign(CENTER, CENTER);
   text("開始", width / 2, btnY + btnH / 2);
 
   // 若有手指動畫，畫出綠色圓圈進度
