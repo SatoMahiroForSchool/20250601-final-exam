@@ -516,17 +516,33 @@ let crazyLastSpeedUp = 0;
 let crazyBallGenRemainder = 0;
 let crazyBallSize = 70;
 
-// --- 新增：結算畫面共用函式 ---
+// --- 新增：結算畫面共用函式（半透明題目框、兩個按鈕，返回選單需2秒觸控） ---
+/**
+ * 遊戲結束畫面（含再來一次與返回選單按鈕，手指需停留2秒）
+ * @param {number} score - 分數
+ * @param {function} onRetry - 再來一次 callback
+ * @param {function} onMenu - 返回選單 callback
+ * @param {object} fingerOnRetry - 再來一次手指動畫狀態
+ * @param {object} fingerOnMenu - 返回選單手指動畫狀態
+ */
 function drawGameOverPanel(score, onRetry, onMenu, fingerOnRetry, fingerOnMenu) {
+  // 半透明黑底
   fill(0, 200);
   rect(0, 0, width, height);
-  fill(255);
-  textSize(32);
+
+  // 半透明白色分數框
+  fill(255, 230);
+  noStroke();
+  rect(width / 2 - 180, height / 2 - 100, 360, 80, 18);
+
+  // 分數文字
+  fill(0);
+  textSize(30);
   textAlign(CENTER, CENTER);
-  text("遊戲結束！分數：" + score, width / 2, height / 2 - 40);
+  text("遊戲結束！分數：" + score, width / 2, height / 2 - 60);
 
   // 再來一次按鈕
-  let retryX = width / 2 - 180, retryY = height / 2 + 20, btnW = 160, btnH = 60;
+  let retryX = width / 2 - 170, retryY = height / 2 + 10, btnW = 150, btnH = 60;
   fill(255);
   stroke(0);
   rect(retryX, retryY, btnW, btnH, 15);
@@ -572,11 +588,11 @@ function drawGameOverPanel(score, onRetry, onMenu, fingerOnRetry, fingerOnMenu) 
     fingerOnMenu.startTime = null;
   }
 
-  // 畫動畫
+  // 畫動畫與觸發
   [fingerOnRetry, fingerOnMenu].forEach((obj) => {
     if (obj.startTime && obj.fingerPos) {
       let now = millis();
-      let progress = constrain((now - obj.startTime) / 3000, 0, 1);
+      let progress = constrain((now - obj.startTime) / 2000, 0, 1); // 2秒
       noFill();
       stroke(0, 255, 0);
       strokeWeight(6);
@@ -600,7 +616,6 @@ function drawGameOverPanel(score, onRetry, onMenu, fingerOnRetry, fingerOnMenu) 
 // --- 新手模式 ---
 let fingerOnEasyRetry = { startTime: null, fingerPos: null, action: null };
 let fingerOnEasyMenu = { startTime: null, fingerPos: null, action: null };
-
 function playEasy() {
   // 結束畫面
   if (easyGameOver) {
@@ -798,11 +813,16 @@ function playNormal() {
   text("剩餘時間：" + remain + " 秒", 20, 80);
   text("分數：" + normalScore, 20, 110);
 
-  // 題目
+  // 題目半透明白色方塊
+  fill(255, 230);
+  noStroke();
+  rect(width / 2 - 200, 120, 400, 60, 16);
+
+  // 題目文字
   fill(0);
   textSize(28);
-  textAlign(CENTER, TOP);
-  text("請選出「" + normalWords[normalCurrent].q + "」的英文", width / 2, 140);
+  textAlign(CENTER, CENTER);
+  text("請選出「" + normalWords[normalCurrent].q + "」的英文", width / 2, 150);
 
   // 2x2選項按鈕（兩行兩列，置中且不接觸）
   let btnW = 180, btnH = 60;
