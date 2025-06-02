@@ -25,6 +25,8 @@ const introTexts = [
   "隨機掉落黑白兩種球，請用手觸控攔截白色球。"
 ];
 
+let currentMode = null; // 0:新手, 1:一般, 2:瘋狂
+
 function setup() {
   createCanvas(640, 480);
 
@@ -114,6 +116,16 @@ function draw() {
       } else {
         fingerOnBack = null;
       }
+
+      // 根據 currentMode 呼叫對應遊戲流程
+      if (currentMode === 0) {
+        playEasy();
+      } else if (currentMode === 1) {
+        playNormal();
+      } else if (currentMode === 2) {
+        playCrazy();
+      }
+      return;
     }
   } else {
     // 攝影機尚未就緒時顯示提示
@@ -226,8 +238,9 @@ function drawMenuButtons() {
       startA, startA + progress * TWO_PI
     );
     strokeWeight(1);
-    // 畫滿就切換到對應 intro 畫面
+    // 修改 drawMenuButtons() 裡切換狀態的地方
     if (progress >= 1) {
+      currentMode = fingerOnBtn.btnIndex;
       gameState = "intro" + fingerOnBtn.btnIndex;
       fingerOnBtn = null;
     }
@@ -481,4 +494,16 @@ function detectGesture(landmarks) {
     return "paper";
   }
   return null;
+}
+
+function playEasy() {
+  // 新手模式遊戲內容
+}
+
+function playNormal() {
+  // 一般模式遊戲內容
+}
+
+function playCrazy() {
+  // 瘋狂模式遊戲內容
 }
