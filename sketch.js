@@ -697,6 +697,8 @@ let normalGameStarted = false;
 let normalGameOver = false;
 let fingerOnNormalBtn = [null, null, null, null];
 let fingerOnNormalBack = null;
+let normalBtnState = [null, null, null, null]; // null/true/false
+let normalBtnLockTime = 0; // >0時鎖定互動
 
 function playNormal() {
   // 結束畫面
@@ -777,10 +779,12 @@ function playNormal() {
     normalGameStarted = true;
     normalGameOver = false;
     fingerOnNormalBtn = [null, null, null, null];
+    normalBtnState = [null, null, null, null];
+    normalBtnLockTime = 0;
   }
 
   // 計時
-  let remain = max(0, 15 - int((millis() - normalTimer) / 1000));
+  let remain = max(0, 30 - int((millis() - normalTimer) / 1000));
   fill(255);
   textSize(22);
   textAlign(LEFT, TOP);
@@ -802,17 +806,33 @@ function playNormal() {
     let row = floor(i / 2), col = i % 2;
     let btnX = startX + col * (btnW + gapX);
     let btnY = startY + row * (btnH + gapY);
-    fill(255);
-    stroke(0);
+
+    // 按鈕顏色
+    if (normalBtnState[i] === true) {
+      fill(0, 180, 0); // 綠色
+      stroke(0);
+    } else if (normalBtnState[i] === false) {
+      fill(220, 0, 0); // 紅色
+      stroke(0);
+    } else {
+      fill(255);
+      stroke(0);
+    }
     rect(btnX, btnY, btnW, btnH, 12);
-    fill(0);
+
+    // 文字顏色
+    if (normalBtnState[i] === true || normalBtnState[i] === false) {
+      fill(255);
+    } else {
+      fill(0);
+    }
     noStroke();
     textSize(22);
     textAlign(CENTER, CENTER);
     text(normalOptions[i], btnX + btnW / 2, btnY + btnH / 2);
 
-    // 手指偵測與0.5秒動畫
-    if (hands.length > 0) {
+    // 手指偵測與3秒動畫（只有沒鎖定時才偵測）
+    if (hands.length > 0 && normalBtnLockTime === 0) {
       let finger = hands[0].landmarks[8];
       if (
         finger[0] > btnX && finger[0] < btnX + btnW &&
@@ -828,7 +848,7 @@ function playNormal() {
       }
       if (fingerOnNormalBtn[i]) {
         let now = millis();
-        let progress = constrain((now - fingerOnNormalBtn[i].startTime) / 500, 0, 1);
+        let progress = constrain((now - fingerOnNormalBtn[i].startTime) / 3000, 0, 1);
         noFill();
         stroke(0, 255, 0);
         strokeWeight(6);
@@ -841,24 +861,34 @@ function playNormal() {
         );
         strokeWeight(1);
         if (progress >= 1) {
-          // 答對
+          // 判斷正確與否，並鎖定1秒
           if (normalOptions[i] === normalWords[normalCurrent].a) {
             normalScore++;
+            normalBtnState[i] = true;
+          } else {
+            normalBtnState[i] = false;
           }
-          // 換下一題
-          normalCurrent = floor(random(normalWords.length));
-          let correct = normalWords[normalCurrent].a;
-          let options = [correct];
-          while (options.length < 4) {
-            let w = normalWords[floor(random(normalWords.length))].a;
-            if (!options.includes(w)) options.push(w);
-          }
-          shuffle(options, true);
-          normalOptions = options;
-          fingerOnNormalBtn = [null, null, null, null];
+          normalBtnLockTime = millis();
         }
       }
     }
+  }
+
+  // 鎖定狀態下，1秒後自動切題
+  if (normalBtnLockTime > 0 && millis() - normalBtnLockTime > 1000) {
+    // 換下一題
+    normalCurrent = floor(random(normalWords.length));
+    let correct = normalWords[normalCurrent].a;
+    let options = [correct];
+    while (options.length < 4) {
+      let w = normalWords[floor(random(normalWords.length))].a;
+      if (!options.includes(w)) options.push(w);
+    }
+    shuffle(options, true);
+    normalOptions = options;
+    fingerOnNormalBtn = [null, null, null, null];
+    normalBtnState = [null, null, null, null];
+    normalBtnLockTime = 0;
   }
 
   // 時間到
